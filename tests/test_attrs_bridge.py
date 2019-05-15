@@ -10,9 +10,10 @@ from parameterized import parameterized
 
 import freezegun
 
+from std_msgs.msg import String
 from sensor_msgs.msg import BatteryState
 
-from fiware_ros_turtlebot3_msgs.msg import r_pos
+from fiware_ros_msgs.msg import r_pos
 
 from fiware_ros_bridge.attrs_bridge import AttrsBridge
 
@@ -28,11 +29,13 @@ class TestAttrsBridge(unittest.TestCase):
         bridge = AttrsBridge()
         mocked_rospy.Subscriber.assert_called()
         called_args = mocked_rospy.Subscriber.call_args_list
-        assert len(called_args) == 2
-        assert called_args[0] == call('/robot_bridge/attrs',
+        assert len(called_args) == 3
+        assert called_args[0] == call('/turtlebot3_bridge/attrs',
                                       r_pos, bridge._on_receive_pos, queue_size=10)
         assert called_args[1] == call('/battery_state',
                                       BatteryState, bridge._on_receive_battery_state, queue_size=10)
+        assert called_args[2] == call('/r_mode',
+                                      String, bridge._on_receive_r_mode, queue_size=10)
 
     @parameterized.expand(utils.expand_ca_params)
     @patch('fiware_ros_bridge.base.mqtt')
@@ -79,12 +82,15 @@ class TestAttrsBridge(unittest.TestCase):
         msg.z = 0.3
         msg.theta = 0.4
 
-        AttrsBridge().connect()._on_receive_pos(msg)
-        payload = '2018-01-02T03:04:05.000000+0900|x|0.1|y|0.2|z|0.3|theta|0.4'
+        with freezegun.freeze_time('2018-01-02T03:04:05.000000+0900'):
+            bridge = AttrsBridge().connect()
+        with freezegun.freeze_time('2018-01-02T03:04:05.100000+0900'):
+            bridge._on_receive_pos(msg)
+        payload = '2018-01-02T03:04:05.100000+0900|x|0.1|y|0.2|z|0.3|theta|0.4|r_mode|standby'
         mocked_mqtt_client.publish.assert_called_once_with('/robot/turtlebot3/attrs', payload)
 
-    @patch('fiware_ros_turtlebot3_bridge.base.mqtt')
-    @patch('fiware_ros_turtlebot3_bridge.attrs_bridge.rospy')
+    @patch('fiware_ros_bridge.base.mqtt')
+    @patch('fiware_ros_bridge.attrs_bridge.rospy')
     def test__on_receive_battery_state_under_threshold(self, mocked_rospy, mocked_mqtt):
         mocked_rospy.get_param.return_value = utils.get_attrs_params()
         mocked_mqtt_client = mocked_mqtt.Client.return_value
