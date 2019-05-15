@@ -84,9 +84,9 @@ class TestAttrsBridge(unittest.TestCase):
 
         with freezegun.freeze_time('2018-01-02T03:04:05.000000+0900'):
             bridge = AttrsBridge().connect()
-        with freezegun.freeze_time('2018-01-02T03:04:05.100000+0900'):
+        with freezegun.freeze_time('2018-01-02T03:04:06.000000+0900'):
             bridge._on_receive_pos(msg)
-        payload = '2018-01-02T03:04:05.100000+0900|x|0.1|y|0.2|z|0.3|theta|0.4|r_mode|standby'
+        payload = '2018-01-02T03:04:06.000000+0900|x|0.1|y|0.2|z|0.3|theta|0.4|r_mode|standby'
         mocked_mqtt_client.publish.assert_called_once_with('/robot/turtlebot3/attrs', payload)
 
     @patch('fiware_ros_bridge.base.mqtt')
